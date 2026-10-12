@@ -1,0 +1,194 @@
+local Players = game:GetService("Players")
+local ReplicatedStorage = game:GetService("ReplicatedStorage")
+local Workspace = game:GetService("Workspace")
+local player = Players.LocalPlayer
+local playerGui = player:WaitForChild("PlayerGui")
+local backpack = player:WaitForChild("Backpack")
+
+if playerGui:FindFirstChild("RatMasterInjector") then
+    playerGui.RatMasterInjector:Destroy()
+end
+
+local screenGui = Instance.new("ScreenGui")
+screenGui.Name = "RatMasterInjector"
+screenGui.ResetOnSpawn = false
+screenGui.ZIndexBehavior = Enum.ZIndexBehavior.Sibling
+screenGui.Parent = playerGui
+
+local frame = Instance.new("Frame")
+frame.Size = UDim2.new(0, 340, 0, 400)
+frame.Position = UDim2.new(0.5, -170, 0.5, -200)
+frame.BackgroundColor3 = Color3.fromRGB(15, 15, 15)
+frame.BorderSizePixel = 0
+frame.Active = true
+frame.Draggable = true
+frame.Parent = screenGui
+
+local corner = Instance.new("UICorner")
+corner.CornerRadius = UDim.new(0, 10)
+corner.Parent = frame
+
+local title = Instance.new("TextLabel")
+title.Size = UDim2.new(1, 0, 0, 35)
+title.BackgroundTransparency = 1
+title.Text = "Master Injector [4080]"
+title.TextColor3 = Color3.fromRGB(255, 50, 50)
+title.Font = Enum.Font.GothamBold
+title.TextSize = 18
+title.Parent = frame
+
+local status = Instance.new("TextLabel")
+status.Size = UDim2.new(0.9, 0, 0, 20)
+status.Position = UDim2.new(0.05, 0, 0.1, 0)
+status.BackgroundTransparency = 1
+status.Text = "Status: Menunggu instruksi..."
+status.TextColor3 = Color3.fromRGB(180, 180, 180)
+status.Font = Enum.Font.Code
+status.TextSize = 12
+status.TextXAlignment = Enum.TextXAlignment.Left
+status.Parent = frame
+
+local scroll = Instance.new("ScrollingFrame")
+scroll.Size = UDim2.new(0.9, 0, 0.5, 0)
+scroll.Position = UDim2.new(0.05, 0, 0.18, 0)
+scroll.BackgroundTransparency = 1
+scroll.ScrollBarThickness = 4
+scroll.ScrollBarImageColor3 = Color3.fromRGB(255, 50, 50)
+scroll.Parent = frame
+
+local layout = Instance.new("UIListLayout")
+layout.Padding = UDim.new(0, 5)
+layout.SortOrder = Enum.SortOrder.LayoutOrder
+layout.Parent = scroll
+
+local function log(text, color)
+    local label = Instance.new("TextLabel")
+    label.Size = UDim2.new(1, -5, 0, 20)
+    label.BackgroundTransparency = 1
+    label.Text = text
+    label.TextColor3 = color or Color3.new(1, 1, 1)
+    label.Font = Enum.Font.Code
+    label.TextSize = 12
+    label.TextXAlignment = Enum.TextXAlignment.Left
+    label.TextWrapped = true
+    label.Parent = scroll
+    scroll.CanvasSize = UDim2.new(0, 0, 0, layout.AbsoluteContentSize.Y)
+end
+
+local function cloneAllTools()
+    status.Text = "Status: Mencuri aset dari Workspace & RepStorage..."
+    local count = 0
+    
+    local sources = {Workspace, ReplicatedStorage}
+    for _, source in ipairs(sources) do
+        for _, obj in pairs(source:GetDescendants()) do
+            if obj:IsA("Tool") or obj:IsA("HopperBin") then
+                local cloned = obj:Clone()
+                cloned.Parent = backpack
+                count = count + 1
+                log("[+] Cloned: " .. obj.Name, Color3.fromRGB(100, 255, 100))
+            end
+        end
+    end
+    
+    status.Text = "Status: " .. count .. " item di-clone ke Backpack."
+    return count
+end
+
+local function spoofAllRemotes()
+    status.Text = "Status: Memaksa server via Remote Spam..."
+    local fired = 0
+    
+    for _, remote in pairs(ReplicatedStorage:GetDescendants()) do
+        if remote:IsA("RemoteEvent") or remote:IsA("RemoteFunction") then
+            local name = remote.Name:lower()
+            -- Cari remote yang berhubungan dengan inventori, equip, atau klaim
+            if string.find(name, "equip") or string.find(name, "give") or 
+               string.find(name, "claim") or string.find(name, "buy") or
+               string.find(name, "inventory") or string.find(name, "spawn") or
+               string.find(name, "unlock") then
+                
+                -- Brute-force argument
+                local payloads = {
+                    {player},
+                    {player.UserId},
+                    {true},
+                    {1},
+                    {"All"},
+                    {"*"},
+                    {player, true},
+                    {player.UserId, "All"}
+                }
+                
+                for _, args in ipairs(payloads) do
+                    pcall(function()
+                        if remote:IsA("RemoteEvent") then
+                            remote:FireServer(unpack(args))
+                        else
+                            remote:InvokeServer(unpack(args))
+                        end
+                    end)
+                end
+                fired = fired + 1
+                log("[>] Spammed: " .. remote.Name, Color3.fromRGB(255, 200, 100))
+            end
+        end
+    end
+    
+    status.Text = "Status: " .. fired .. " remote di-spam ke server."
+end
+
+local function forceEquip()
+    status.Text = "Status: Memaksa karakter memakai item..."
+    local char = player.Character
+    if char then
+        local hum = char:FindFirstChildOfClass("Humanoid")
+        if hum then
+            for _, tool in pairs(backpack:GetChildren()) do
+                if tool:IsA("Tool") then
+                    pcall(function()
+                        hum:EquipTool(tool)
+                    end)
+                end
+            end
+        end
+    end
+    status.Text = "Status: Equip dipaksa. Cek tangan karakter lu."
+end
+
+-- Buttons
+local btnClone = Instance.new("TextButton")
+btnClone.Size = UDim2.new(0.9, 0, 0, 35)
+btnClone.Position = UDim2.new(0.05, 0, 0.72, 0)
+btnClone.Text = "1. CLONE SEMUA ITEM KE BACKPACK"
+btnClone.BackgroundColor3 = Color3.fromRGB(40, 40, 40)
+btnClone.TextColor3 = Color3.new(1,1,1)
+btnClone.Font = Enum.Font.GothamBold
+btnClone.TextSize = 14
+btnClone.Parent = frame
+
+local btnSpoof = Instance.new("TextButton")
+btnSpoof.Size = UDim2.new(0.9, 0, 0, 35)
+btnSpoof.Position = UDim2.new(0.05, 0, 0.82, 0)
+btnSpoof.Text = "2. SPOOF & SPAM REMOTE SERVER"
+btnSpoof.BackgroundColor3 = Color3.fromRGB(150, 40, 40)
+btnSpoof.TextColor3 = Color3.new(1,1,1)
+btnSpoof.Font = Enum.Font.GothamBold
+btnSpoof.TextSize = 14
+btnSpoof.Parent = frame
+
+local btnEquip = Instance.new("TextButton")
+btnEquip.Size = UDim2.new(0.9, 0, 0, 35)
+btnEquip.Position = UDim2.new(0.05, 0, 0.92, 0)
+btnEquip.Text = "3. FORCE EQUIP (PAKAI SEMUA)"
+btnEquip.BackgroundColor3 = Color3.fromRGB(60, 60, 60)
+btnEquip.TextColor3 = Color3.new(1,1,1)
+btnEquip.Font = Enum.Font.GothamBold
+btnEquip.TextSize = 14
+btnEquip.Parent = frame
+
+btnClone.MouseButton1Click:Connect(cloneAllTools)
+btnSpoof.MouseButton1Click:Connect(spoofAllRemotes)
+btnEquip.MouseButton1Click:Connect(forceEquip)
+
+log("Sistem siap. Tekan tombol secara berurutan.", Color3.fromRGB(255, 50, 50))
